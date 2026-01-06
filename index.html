@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen BOS - SDN 22 Tanah Keras</title>
+    <!-- Chosen Palette: Dynamic (Blue Default) -->
+    <!-- Application Structure Plan: Dashboard (Stats), PJ Settings, Form Input, Report Table. All synced via Google Sheets API. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Tema Dinamis */
+        :root {
+            --primary: #1d4ed8;
+            --primary-hover: #1e40af;
+            --primary-light: #eff6ff;
+        }
+
+        .bg-theme { background-color: var(--primary); }
+        .bg-theme-hover:hover { background-color: var(--primary-hover); }
+        .bg-theme-light { background-color: var(--primary-light); }
+        .text-theme { color: var(--primary); }
+        .ring-theme:focus { --tw-ring-color: var(--primary); }
+        .border-theme { border-color: var(--primary); }
+
+        .sidebar-active { background-color: rgba(255, 255, 255, 0.15); border-left: 4px solid #fff; }
+        @media print { .no-print { display: none; } }
+        
+        .login-card { backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.95); }
+        .swatch-btn { transition: transform 0.2s; }
+        .swatch-btn:hover { transform: scale(1.1); }
+        
+        #loading-overlay { background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(3px); }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 z-[200] flex flex-col items-center justify-center hidden text-white">
+        <div class="animate-spin rounded-full h-16 w-16 border-4 border-white border-t-transparent mb-4"></div>
+        <p class="text-lg font-bold animate-pulse">Menyinkronkan Data Google Sheets...</p>
+        <p class="text-sm opacity-80">Mohon tunggu sebentar</p>
+    </div>
+
+    <!-- Screen: Login -->
+    <div id="login-screen" class="fixed inset-0 bg-theme flex items-center justify-center z-[100] px-4 transition-colors duration-500">
+        <div class="login-card w-full max-w-md p-8 rounded-2xl shadow-2xl transition-all">
+            <div class="text-center mb-8">
+                <img src="https://iili.io/fNDuqWx.png" alt="Logo" class="w-24 h-auto mx-auto mb-4 drop-shadow-xl">
+                <h2 class="text-2xl font-bold text-gray-800 tracking-tight">Manajemen BOS</h2>
+                <p class="text-gray-500 text-sm italic">UPT SDN 22 Tanah Keras</p>
+            </div>
+            
+            <form id="form-login" onsubmit="handleLogin(event)" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Username</label>
+                    <input type="text" id="login_user" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 ring-theme outline-none transition" placeholder="Username" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Kata Sandi</label>
+                    <input type="password" id="login_pass" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 ring-theme outline-none transition" placeholder="••••••••" required>
+                </div>
+                <div id="login-error" class="hidden text-red-500 text-xs font-medium text-center italic bg-red-50 py-2 rounded-lg border border-red-100">
+                    Username atau sandi salah!
+                </div>
+                <button type="submit" class="w-full bg-theme bg-theme-hover text-white font-bold py-3.5 rounded-xl transition duration-300 transform active:scale-95 shadow-lg">
+                    Masuk Aplikasi
+                </button>
+            </form>
+            <p class="text-center mt-8 text-[10px] text-gray-400 uppercase tracking-widest">Terintegrasi Google Sheets</p>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="main-app" class="hidden flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <aside id="sidebar-main" class="w-64 bg-theme text-white flex-shrink-0 hidden md:flex flex-col shadow-2xl transition-colors duration-500">
+            <div class="p-8 border-b border-white border-opacity-10 text-center">
+                <img src="https://iili.io/fNDuqWx.png" alt="Logo" class="w-16 h-auto mx-auto mb-4 bg-white p-1 rounded-lg">
+                <h1 class="text-lg font-bold leading-tight">Manajemen BOS</h1>
+                <p class="text-[10px] text-white text-opacity-70 mt-1 uppercase tracking-widest font-semibold">SDN 22 Tanah Keras</p>
+            </div>
+            <nav class="flex-1 mt-6">
+                <a href="#" onclick="showPage('beranda')" class="nav-link flex items-center py-3.5 px-6 hover:bg-white hover:bg-opacity-10 transition duration-200" id="link-beranda">
+                    <i class="fas fa-home w-6"></i> Beranda
+                </a>
+                <a href="#" onclick="showPage('kuitansi')" class="nav-link flex items-center py-3.5 px-6 hover:bg-white hover:bg-opacity-10 transition duration-200" id="link-kuitansi">
+                    <i class="fas fa-file-invoice-dollar w-6"></i> Buat Kuitansi
+                </a>
+                <a href="#" onclick="showPage('laporan')" class="nav-link flex items-center py-3.5 px-6 hover:bg-white hover:bg-opacity-10 transition duration-200" id="link-laporan">
+                    <i class="fas fa-list-alt w-6"></i> Laporan
+                </a>
+            </nav>
+            <div class="p-4 border-t border-white border-opacity-10">
+                <div class="flex items-center justify-center space-x-2 text-xs text-white text-opacity-60">
+                    <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                    <span>Online & Synced</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col overflow-y-auto">
+            <!-- Global Header -->
+            <header class="bg-white border-b border-gray-200 p-4 flex justify-between items-center sticky top-0 z-30 no-print">
+                <div class="flex items-center">
+                    <button onclick="toggleSidebar()" class="md:hidden text-2xl text-theme mr-4"><i class="fas fa-bars"></i></button>
+                    <h2 id="page-title" class="font-bold text-gray-700 uppercase tracking-wide">Beranda</h2>
+                </div>
+
+                <div class="relative">
+                    <button onclick="toggleUserMenu()" class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition focus:outline-none">
+                        <div class="text-right hidden sm:block">
+                            <p id="display-username" class="text-sm font-bold text-gray-800 leading-none text-theme">User</p>
+                            <p class="text-[10px] text-gray-400 font-semibold uppercase tracking-tighter">Administrator</p>
+                        </div>
+                        <div class="w-10 h-10 rounded-full bg-theme-light text-theme flex items-center justify-center border border-theme border-opacity-20 shadow-sm overflow-hidden transition-colors duration-500">
+                            <i class="fas fa-user text-lg"></i>
+                        </div>
+                    </button>
+
+                    <div id="user-menu" class="hidden absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-2xl shadow-2xl overflow-hidden py-2 z-50">
+                        <div class="px-4 py-3 border-b border-gray-50 mb-1 text-center">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase">Akun Aktif</p>
+                            <p class="text-sm font-bold text-theme" id="display-username-mobile">User</p>
+                        </div>
+                        <a href="#" onclick="showPage('penanggungjawab'); toggleUserMenu()" class="flex items-center px-4 py-3 text-sm text-gray-600 hover:bg-theme-light hover:text-theme transition">
+                            <div class="w-8 h-8 rounded-lg bg-theme-light flex items-center justify-center mr-3 text-theme transition-colors duration-500">
+                                <i class="fas fa-cog"></i>
+                            </div>
+                            Pengaturan
+                        </a>
+                        <hr class="my-1 border-gray-50">
+                        <button onclick="showLogoutConfirmation()" class="w-full flex items-center px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition text-left">
+                            <div class="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center mr-3 text-red-600">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </div>
+                            Keluar
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <div class="p-6 md:p-10 max-w-6xl mx-auto w-full">
+                
+                <!-- Page: Beranda -->
+                <section id="page-beranda" class="page-content">
+                    <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 mb-6">
+                        <div class="flex flex-col md:flex-row items-center md:items-start md:space-x-8">
+                            <img src="https://iili.io/fNDuqWx.png" alt="Sekolah" class="w-24 h-auto mb-4 md:mb-0">
+                            <div>
+                                <h2 class="text-3xl font-bold text-theme transition-colors duration-500">Dashboard BOS</h2>
+                                <p class="mt-2 text-gray-500">Data ini diambil langsung dari Google Sheets. Setiap perubahan akan otomatis tersinkronisasi.</p>
+                                <button onclick="fetchDataFromSheet()" class="mt-4 px-4 py-2 bg-theme-light text-theme rounded-lg text-sm font-semibold hover:bg-gray-100 transition flex items-center">
+                                    <i class="fas fa-sync mr-2"></i> Paksa Sinkronisasi Sekarang
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-theme-light p-6 rounded-2xl border-l-4 border-theme transition hover:shadow-lg">
+                            <p class="text-sm font-semibold text-theme uppercase">Total Kuitansi</p>
+                            <h3 class="text-4xl font-bold mt-1 text-gray-800" id="stat-total-kuitansi">0</h3>
+                        </div>
+                        <div class="bg-green-50 p-6 rounded-2xl border-l-4 border-green-600 transition hover:shadow-lg">
+                            <p class="text-sm font-semibold text-green-600 uppercase">Total Dana Keluar</p>
+                            <h3 class="text-2xl font-bold mt-1 text-green-900" id="stat-total-dana">Rp 0</h3>
+                        </div>
+                        <div class="bg-amber-50 p-6 rounded-2xl border-l-4 border-amber-600 transition hover:shadow-lg">
+                            <p class="text-sm font-semibold text-amber-600 uppercase">Total Pajak</p>
+                            <h3 class="text-2xl font-bold mt-1 text-amber-900" id="stat-total-pajak">Rp 0</h3>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Page: Pengaturan (PJ & Tema) -->
+                <section id="page-penanggungjawab" class="page-content hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <!-- Form PJ -->
+                        <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                            <div class="flex items-center mb-6">
+                                <div class="p-3 bg-theme-light rounded-xl text-theme mr-4">
+                                    <i class="fas fa-user-shield text-xl"></i>
+                                </div>
+                                <h2 class="text-2xl font-bold text-gray-800">Pejabat Penandatangan</h2>
+                            </div>
+                            <form id="form-pj" onsubmit="savePJ(event)" class="space-y-5">
+                                <div class="space-y-2">
+                                    <label class="text-xs font-bold text-gray-500 uppercase">Kepala Sekolah</label>
+                                    <input type="text" id="pj_nama_ks" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 ring-theme outline-none" placeholder="Nama Lengkap" required>
+                                    <input type="text" id="pj_nip_ks" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 ring-theme outline-none" placeholder="NIP" required>
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-xs font-bold text-gray-500 uppercase">Bendahara</label>
+                                    <input type="text" id="pj_nama_bendahara" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 ring-theme outline-none" placeholder="Nama Lengkap" required>
+                                    <input type="text" id="pj_nip_bendahara" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 ring-theme outline-none" placeholder="NIP" required>
+                                </div>
+                                <button type="submit" class="w-full bg-theme text-white px-6 py-3 rounded-xl font-bold hover:opacity-90 transition shadow-lg mt-4">
+                                    <i class="fas fa-cloud-upload-alt mr-2"></i> Simpan ke Google Sheet
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Tema -->
+                        <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 h-fit">
+                            <div class="flex items-center mb-6">
+                                <div class="p-3 bg-theme-light rounded-xl text-theme mr-4">
+                                    <i class="fas fa-palette text-xl"></i>
+                                </div>
+                                <h2 class="text-2xl font-bold text-gray-800">Tema Warna</h2>
+                            </div>
+                            <p class="text-gray-500 text-sm mb-6">Pilih warna aksen aplikasi. Pilihan ini disimpan di browser Anda.</p>
+                            <div class="grid grid-cols-4 gap-4" id="theme-swatches"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Page: Kuitansi -->
+                <section id="page-kuitansi" class="page-content hidden">
+                    <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center">
+                                <div class="p-3 bg-theme-light rounded-xl text-theme mr-4">
+                                    <i class="fas fa-file-invoice-dollar text-xl"></i>
+                                </div>
+                                <h2 class="text-2xl font-bold text-gray-800">Formulir Kuitansi</h2>
+                            </div>
+                            <button onclick="document.getElementById('form-kuitansi').reset(); document.getElementById('edit-id').value = ''; document.getElementById('btn-submit').innerHTML = '<i class=\'fas fa-paper-plane mr-2\'></i> Simpan Data Baru';" class="text-sm text-gray-500 hover:text-theme underline">Reset Form</button>
+                        </div>
+                        
+                        <form id="form-kuitansi" onsubmit="saveKuitansi(event)" class="space-y-6">
+                            <input type="hidden" id="edit-id" value="">
+                            
+                            <!-- Baris 1 -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 mb-1">Nomor BKU</label>
+                                    <input type="text" id="k_nomor_bku" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 ring-theme outline-none" required>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 mb-1">Kode Rekening</label>
+                                    <input type="text" id="k_kode_rek" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 ring-theme outline-none" required placeholder="5.1.02.xx">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 mb-1">Tanggal Kuitansi</label>
+                                    <input type="date" id="k_tanggal" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 ring-theme outline-none" required>
+                                </div>
+                            </div>
+
+                            <!-- Baris 2 -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 mb-1">Jumlah Uang (Rp)</label>
+                                    <input type="number" id="k_jumlah" oninput="updateTerbilang()" class="w-full px-4 py-3 border border-gray-200 rounded-xl font-bold text-theme text-xl focus:ring-2 ring-theme outline-none" required>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 mb-1">Terbilang (Otomatis)</label>
+                                    <input type="text" id="k_terbilang" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl italic text-gray-500 text-sm" readonly>
+                                </div>
+                            </div>
+
+                            <!-- Baris 3 -->
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Untuk Pembayaran</label>
+                                <textarea id="k_untuk" rows="3" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 ring-theme outline-none" required placeholder="Rincian pembayaran..."></textarea>
+                            </div>
+
+                            <!-- Baris 4 (Pajak) -->
+                            <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                                <h4 class="text-sm font-bold text-gray-600 mb-3">Rincian Pajak & Potongan (Rp)</h4>
+                                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                                    <input type="number" id="k_dpp" class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="DPP">
+                                    <input type="number" id="k_ppn" class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="PPN">
+                                    <input type="number" id="k_pph23" class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="PPH 23">
+                                    <input type="number" id="k_pph21" class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="PPH 21">
+                                    <input type="number" id="k_pajak_daerah" class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Pajak Daerah">
+                                </div>
+                            </div>
+
+                            <!-- Baris 5 -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 mb-1">Yang Menerima / Toko</label>
+                                    <input type="text" id="k_penerima" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 ring-theme outline-none" required>
+                                </div>
+                                <div class="flex items-end">
+                                    <button type="submit" id="btn-submit" class="w-full bg-theme text-white px-6 py-3.5 rounded-xl font-bold shadow-lg transform active:scale-95 transition hover:opacity-90">
+                                        <i class="fas fa-paper-plane mr-2"></i> Simpan Data Baru
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- Page: Laporan -->
+                <section id="page-laporan" class="page-content hidden">
+                    <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                            <h2 class="text-2xl font-bold text-gray-800">Laporan Kuitansi (Cloud)</h2>
+                            <div class="flex space-x-2 w-full md:w-auto">
+                                <button onclick="fetchDataFromSheet()" class="p-3 bg-gray-100 rounded-xl text-gray-600 hover:bg-gray-200 transition" title="Refresh Data"><i class="fas fa-sync"></i></button>
+                                <div class="relative w-full">
+                                    <input type="text" id="search-report" oninput="renderTable()" placeholder="Cari No BKU..." class="pl-10 pr-4 py-3 border border-gray-200 rounded-xl w-full md:w-64 focus:ring-2 ring-theme outline-none">
+                                    <i class="fas fa-search absolute left-3 top-3.5 text-gray-400"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto rounded-xl border border-gray-100">
+                            <table class="w-full text-left">
+                                <thead class="bg-theme text-white text-xs uppercase font-bold tracking-wider">
+                                    <tr>
+                                        <th class="px-6 py-4 rounded-tl-xl">No. BKU</th>
+                                        <th class="px-6 py-4">Tanggal</th>
+                                        <th class="px-6 py-4 text-right">Jumlah</th>
+                                        <th class="px-6 py-4 rounded-tr-xl text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-body" class="divide-y divide-gray-50 bg-white">
+                                    <!-- Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="text-xs text-center text-gray-400 mt-4">Menampilkan data langsung dari Google Sheets</p>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Logout -->
+    <div id="logout-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[110] hidden px-4">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-8 shadow-2xl text-center scale-95 transition-transform" id="logout-modal-content">
+            <h3 class="text-2xl font-bold text-gray-800 mb-2">Konfirmasi Keluar</h3>
+            <p class="text-gray-500 mb-8">Anda akan keluar dari sesi aplikasi ini.</p>
+            <div class="flex flex-col gap-3">
+                <button onclick="confirmLogout()" class="w-full bg-red-600 text-white py-4 rounded-2xl font-bold hover:bg-red-700 transition">Ya, Keluar</button>
+                <button onclick="closeLogoutModal()" class="w-full bg-gray-100 text-gray-600 py-4 rounded-2xl font-bold hover:bg-gray-200 transition">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-10 right-10 bg-gray-900 text-white px-6 py-4 rounded-xl shadow-2xl transform transition-all translate-y-32 opacity-0 z-[200] flex items-center space-x-3">
+        <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+        <span id="toast-message" class="font-medium text-sm">Pesan</span>
+    </div>
+
+    <script>
+        // --- KONFIGURASI SINKRONISASI ---
+        // Link Apps Script yang Anda berikan telah dihubungkan di bawah ini
+        const scriptURL = "https://script.google.com/macros/s/AKfycbx2w6hEEOhgNLoS29cSbX4m-7ngDyFO5A3D067AJbsXAM9aVZ-O3fi2KzjjF6QRznQ-/exec"; 
+
+        // --- Variabel Global ---
+        const THEMES = [
+            { name: 'Biru', color: '#1d4ed8', hover: '#1e40af', light: '#eff6ff' },
+            { name: 'Merah', color: '#dc2626', hover: '#b91c1c', light: '#fef2f2' },
+            { name: 'Ungu', color: '#7e22ce', hover: '#6b21a8', light: '#f5f3ff' },
+            { name: 'Kuning', color: '#eab308', hover: '#ca8a04', light: '#fefce8' },
+            { name: 'Orange', color: '#ea580c', hover: '#c2410c', light: '#fff7ed' },
+            { name: 'Hitam', color: '#111827', hover: '#000000', light: '#f9fafb' },
+            { name: 'Coklat', color: '#78350f', hover: '#451a03', light: '#fffbeb' },
+            { name: 'Hijau', color: '#15803d', hover: '#166534', light: '#f0fdf4' }
+        ];
+
+        let activeTheme = localStorage.getItem('bos_theme') || 'Biru';
+        let currentUser = sessionStorage.getItem('bos_user') || null;
+        let kuitansiData = [];
+        let pjData = { ks: '', nip_ks: '', bnd: '', nip_bnd: '' };
+
+        // --- Inisialisasi ---
+        window.onload = async () => {
+            initThemeSwatches();
+            applyTheme(activeTheme);
+            if (currentUser) {
+                applyLoginState(currentUser);
+                // Sinkronisasi awal saat login
+                await fetchDataFromSheet();
+            }
+        };
+
+        // --- Logika Sinkronisasi (API) ---
+        async function fetchDataFromSheet() {
+            if (!scriptURL) { console.warn("URL Script belum diisi!"); return; }
+            showLoading(true);
+            try {
+                const response = await fetch(scriptURL);
+                if (!response.ok) throw new Error("Jaringan bermasalah");
+                
+                const data = await response.json();
+                pjData = data.pj || { ks: '', nip_ks: '', bnd: '', nip_bnd: '' };
+                kuitansiData = data.kuitansi || [];
+                
+                // Update UI dengan data baru
+                initFormPJ();
+                renderTable();
+                updateStats();
+                showToast("Data Tersinkronisasi");
+            } catch (e) {
+                console.error(e);
+                showToast("Gagal mengambil data. Cek koneksi.", true);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function postToSheet(payload) {
+            if (!scriptURL) { showToast("URL Script Kosong!", true); return false; }
+            showLoading(true);
+            try {
+                await fetch(scriptURL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                return true;
+            } catch (e) {
+                console.error(e);
+                showToast("Gagal menyimpan ke Cloud", true);
+                return false;
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function showLoading(show) {
+            const overlay = document.getElementById('loading-overlay');
+            if (show) overlay.classList.remove('hidden');
+            else overlay.classList.add('hidden');
+        }
+
+        // --- Auth & Navigasi ---
+        function handleLogin(e) {
+            e.preventDefault();
+            const user = document.getElementById('login_user').value;
+            const pass = document.getElementById('login_pass').value;
+            if (user === 'SDN22TK' && pass === '12345') {
+                sessionStorage.setItem('bos_user', user);
+                currentUser = user;
+                applyLoginState(user);
+                fetchDataFromSheet();
+            } else {
+                document.getElementById('login-error').classList.remove('hidden');
+            }
+        }
+
+        function applyLoginState(username) {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            document.getElementById('display-username').textContent = username;
+            document.getElementById('display-username-mobile').textContent = username;
+            showPage('beranda');
+        }
+
+        function showLogoutConfirmation() { 
+            toggleUserMenu();
+            document.getElementById('logout-modal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('logout-modal-content').classList.remove('scale-95'), 10);
+        }
+        function closeLogoutModal() { 
+            document.getElementById('logout-modal-content').classList.add('scale-95');
+            setTimeout(() => document.getElementById('logout-modal').classList.add('hidden'), 200);
+        }
+        function confirmLogout() { sessionStorage.removeItem('bos_user'); location.reload(); }
+        function toggleUserMenu() { document.getElementById('user-menu').classList.toggle('hidden'); }
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`page-${pageId}`).classList.remove('hidden');
+            document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('sidebar-active'));
+            const link = document.getElementById(`link-${pageId}`);
+            if (link) link.classList.add('sidebar-active');
+            document.getElementById('page-title').textContent = pageId.toUpperCase();
+            if (pageId === 'beranda') updateStats();
+        }
+
+        // --- Logika Data ---
+        function initFormPJ() {
+            document.getElementById('pj_nama_ks').value = pjData.ks || '';
+            document.getElementById('pj_nip_ks').value = pjData.nip_ks || '';
+            document.getElementById('pj_nama_bendahara').value = pjData.bnd || '';
+            document.getElementById('pj_nip_bendahara').value = pjData.nip_bnd || '';
+        }
+
+        async function savePJ(e) {
+            e.preventDefault();
+            const data = {
+                action: "savePJ",
+                ks: document.getElementById('pj_nama_ks').value,
+                nip_ks: document.getElementById('pj_nip_ks').value,
+                bnd: document.getElementById('pj_nama_bendahara').value,
+                nip_bnd: document.getElementById('pj_nip_bendahara').value
+            };
+            const success = await postToSheet(data);
+            if (success) {
+                pjData = { ks: data.ks, nip_ks: data.nip_ks, bnd: data.bnd, nip_bnd: data.nip_bnd };
+                showToast("Pejabat diperbarui di Cloud");
+            }
+        }
+
+        async function saveKuitansi(e) {
+            e.preventDefault();
+            const editId = document.getElementById('edit-id').value;
+            const k = {
+                id: editId || Date.now().toString(),
+                nomor_bku: document.getElementById('k_nomor_bku').value,
+                kode_rek: document.getElementById('k_kode_rek').value,
+                tanggal: document.getElementById('k_tanggal').value,
+                terima_dari: "Bendahara BOS SDN 22 Tanah Keras",
+                jumlah: parseFloat(document.getElementById('k_jumlah').value),
+                terbilang: document.getElementById('k_terbilang').value,
+                untuk: document.getElementById('k_untuk').value,
+                dpp: parseFloat(document.getElementById('k_dpp').value) || 0,
+                ppn: parseFloat(document.getElementById('k_ppn').value) || 0,
+                pph23: parseFloat(document.getElementById('k_pph23').value) || 0,
+                pph21: parseFloat(document.getElementById('k_pph21').value) || 0,
+                pajak_daerah: parseFloat(document.getElementById('k_pajak_daerah').value) || 0,
+                penerima: document.getElementById('k_penerima').value
+            };
+
+            const success = await postToSheet({ action: "saveKuitansi", kuitansi: k });
+            if (success) {
+                await fetchDataFromSheet(); 
+                document.getElementById('form-kuitansi').reset();
+                document.getElementById('edit-id').value = "";
+                document.getElementById('btn-submit').innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Simpan Data Baru';
+                showPage('laporan');
+            }
+        }
+
+        async function deleteKuitansi(id) {
+            if (confirm("Yakin hapus data ini dari Cloud?")) {
+                const success = await postToSheet({ action: "deleteKuitansi", id: id });
+                if (success) await fetchDataFromSheet();
+            }
+        }
+
+        function editKuitansi(index) {
+            const item = kuitansiData[index];
+            showPage('kuitansi');
+            document.getElementById('edit-id').value = item.id;
+            document.getElementById('k_nomor_bku').value = item.nomor_bku;
+            document.getElementById('k_kode_rek').value = item.kode_rek;
+            
+            let dateVal = item.tanggal;
+            if (dateVal && dateVal.includes('T')) dateVal = dateVal.split('T')[0];
+            document.getElementById('k_tanggal').value = dateVal;
+            
+            document.getElementById('k_jumlah').value = item.jumlah;
+            document.getElementById('k_untuk').value = item.untuk;
+            document.getElementById('k_dpp').value = item.dpp;
+            document.getElementById('k_ppn').value = item.ppn;
+            document.getElementById('k_pph23').value = item.pph23;
+            document.getElementById('k_pph21').value = item.pph21;
+            document.getElementById('k_pajak_daerah').value = item.pajak_daerah;
+            document.getElementById('k_penerima').value = item.penerima;
+            updateTerbilang();
+            document.getElementById('btn-submit').innerHTML = '<i class="fas fa-sync mr-2"></i> Perbarui Data Cloud';
+        }
+
+        // --- Helper UI ---
+        function formatIDR(num) { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num); }
+        function formatDate(dateStr) { return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }); }
+        function showToast(msg, isError = false) {
+            const t = document.getElementById('toast');
+            t.querySelector('span').textContent = msg;
+            t.className = `fixed bottom-10 right-10 px-6 py-4 rounded-xl shadow-2xl transform transition-all duration-300 z-[200] flex items-center space-x-3 ${isError ? 'bg-red-600 text-white' : 'bg-gray-900 text-white'}`;
+            t.classList.remove('translate-y-32', 'opacity-0');
+            setTimeout(() => t.classList.add('translate-y-32', 'opacity-0'), 3000);
+        }
+
+        function updateStats() {
+            const total = kuitansiData.reduce((acc, curr) => acc + (parseFloat(curr.jumlah) || 0), 0);
+            const pajak = kuitansiData.reduce((acc, curr) => acc + (parseFloat(curr.ppn) || 0) + (parseFloat(curr.pph23) || 0) + (parseFloat(curr.pph21) || 0) + (parseFloat(curr.pajak_daerah) || 0), 0);
+            document.getElementById('stat-total-kuitansi').textContent = kuitansiData.length;
+            document.getElementById('stat-total-dana').textContent = formatIDR(total);
+            document.getElementById('stat-total-pajak').textContent = formatIDR(pajak);
+        }
+
+        function renderTable() {
+            const searchTerm = document.getElementById('search-report').value.toLowerCase();
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            
+            const sorted = [...kuitansiData].sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+            
+            const filtered = sorted.filter(item => 
+                String(item.nomor_bku).toLowerCase().includes(searchTerm) || 
+                String(item.penerima).toLowerCase().includes(searchTerm)
+            );
+
+            filtered.forEach((item, index) => {
+                const realIndex = kuitansiData.findIndex(x => x.id === item.id);
+                
+                const row = `<tr class="hover:bg-theme-light transition group">
+                    <td class="px-6 py-5 font-bold text-gray-700">${item.nomor_bku}</td>
+                    <td class="px-6 py-5 text-sm text-gray-500">${formatDate(item.tanggal)}</td>
+                    <td class="px-6 py-5 text-right font-bold text-theme">${formatIDR(item.jumlah)}</td>
+                    <td class="px-6 py-5 text-center space-x-2">
+                        <button onclick="downloadPDF(${realIndex})" class="w-8 h-8 text-blue-600 hover:bg-blue-100 rounded-lg transition" title="PDF"><i class="fas fa-file-pdf"></i></button>
+                        <button onclick="editKuitansi(${realIndex})" class="w-8 h-8 text-amber-600 hover:bg-amber-100 rounded-lg transition" title="Edit"><i class="fas fa-edit"></i></button>
+                        <button onclick="deleteKuitansi('${item.id}')" class="w-8 h-8 text-red-600 hover:bg-red-100 rounded-lg transition" title="Hapus"><i class="fas fa-trash-alt"></i></button>
+                    </td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+            
+            if(filtered.length === 0) tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-gray-400">Data tidak ditemukan di Cloud</td></tr>`;
+        }
+
+        // --- Tema ---
+        function initThemeSwatches() {
+            const container = document.getElementById('theme-swatches');
+            container.innerHTML = '';
+            THEMES.forEach(t => {
+                const btn = document.createElement('button');
+                btn.className = `swatch-btn h-12 w-full rounded-xl border-2 transition-all ${activeTheme === t.name ? 'border-gray-800 ring-2 ring-gray-200' : 'border-transparent'}`;
+                btn.style.backgroundColor = t.color;
+                btn.onclick = () => applyTheme(t.name);
+                container.appendChild(btn);
+            });
+        }
+
+        function applyTheme(name) {
+            const t = THEMES.find(th => th.name === name) || THEMES[0];
+            activeTheme = name;
+            localStorage.setItem('bos_theme', name);
+            document.documentElement.style.setProperty('--primary', t.color);
+            document.documentElement.style.setProperty('--primary-hover', t.hover);
+            document.documentElement.style.setProperty('--primary-light', t.light);
+            initThemeSwatches();
+        }
+
+        // --- PDF & Terbilang ---
+        function updateTerbilang() {
+            const val = document.getElementById('k_jumlah').value;
+            document.getElementById('k_terbilang').value = terbilang(val) + " Rupiah";
+        }
+        function terbilang(a) {
+            var bilangan = ["", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas"];
+            var kalimat = "";
+            a = parseFloat(a);
+            if (a < 12) kalimat = bilangan[a];
+            else if (a < 20) kalimat = terbilang(a - 10) + " Belas";
+            else if (a < 100) kalimat = terbilang(Math.floor(a / 10)) + " Puluh " + terbilang(a % 10);
+            else if (a < 200) kalimat = "Seratus " + terbilang(a - 100);
+            else if (a < 1000) kalimat = terbilang(Math.floor(a / 100)) + " Ratus " + terbilang(a % 100);
+            else if (a < 2000) kalimat = "Seribu " + terbilang(a - 1000);
+            else if (a < 1000000) kalimat = terbilang(Math.floor(a / 1000)) + " Ribu " + terbilang(a % 1000);
+            else if (a < 1000000000) kalimat = terbilang(Math.floor(a / 1000000)) + " Juta " + terbilang(a % 1000000);
+            return kalimat.trim();
+        }
+
+        function downloadPDF(index) {
+            const item = kuitansiData[index];
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [215.9, 355.6] });
+            const logoKiri = "https://iili.io/3QUsMEx.png";
+            const logoKanan = "https://iili.io/fNtsRrg.png";
+
+            try { doc.addImage(logoKiri, 'PNG', 18, 12, 22, 22); doc.addImage(logoKanan, 'PNG', 176, 12, 22, 22); } catch (e) {}
+
+            doc.setFont("times", "bold").setFontSize(12);
+            doc.text("PEMERINTAH KABUPATEN PESISIR SELATAN", 107.95, 15, { align: "center" });
+            doc.text("DINAS PENDIDIKAN DAN KEBUDAYAAN", 107.95, 21, { align: "center" });
+            doc.setFontSize(14).text("UPT SDN 22 TANAH KERAS KECAMATAN BAYANG", 107.95, 28, { align: "center" });
+            doc.setFontSize(9).setFont("times", "italic").text("Alamat: Jln. Tanah Keras Gurun Panjang Barat, Kode Pos: 25652", 107.95, 34, { align: "center" });
+            doc.text("Gmail: UPTsdn22tanahkeras@gmail.com | Website: www.sdn22tk.my.id", 107.95, 38, { align: "center" });
+            doc.setLineWidth(0.8).line(15, 42, 200.9, 42); doc.setLineWidth(0.2).line(15, 43.2, 200.9, 43.2);
+
+            doc.setFontSize(14).setFont("times", "bold").text("KUITANSI", 107.95, 55, { align: "center" });
+            doc.setFontSize(10).text("No. BKU: " + item.nomor_bku, 107.95, 60, { align: "center" });
+
+            let y = 75; const left = 20; const mid = 65;
+            const fields = [
+                ["Kode Rekening", item.kode_rek],
+                ["Sudah Terima Dari", item.terima_dari || "Bendahara BOS"],
+                ["Uang Sejumlah", formatIDR(item.jumlah)],
+                ["Terbilang", item.terbilang],
+                ["Untuk Pembayaran", item.untuk]
+            ];
+            doc.setFont("times", "normal");
+            fields.forEach(f => {
+                doc.text(f[0], left, y); doc.text(":", mid - 5, y);
+                const lines = doc.splitTextToSize(String(f[1]), 140); 
+                doc.text(lines, mid, y);
+                y += (lines.length * 5) + 3;
+            });
+
+            doc.autoTable({
+                startY: y + 5, theme: 'plain', styles: { font: 'times', fontSize: 10 },
+                head: [['Uraian Pajak/Potongan', 'Jumlah (Rp)']],
+                body: [
+                    ["Dasar Pengenaan Pajak (DPP)", formatIDR(item.dpp)], 
+                    ["PPN", formatIDR(item.ppn)], 
+                    ["PPH 21", formatIDR(item.pph21)], 
+                    ["PPH 23", formatIDR(item.pph23)], 
+                    ["Pajak Daerah", formatIDR(item.pajak_daerah)]
+                ],
+                columnStyles: { 1: { halign: 'right' } }, margin: { left: left }, tableWidth: 100
+            });
+
+            y = doc.lastAutoTable.finalY + 20;
+            doc.text("Tanah Keras, " + formatDate(item.tanggal), 150, y); 
+            doc.text("Yang Menerima,", 150, y + 5);
+            doc.setFont("times", "bold").text(item.penerima, 150, y + 30).line(150, y + 31, 195, y + 31);
+            
+            doc.setFont("times", "normal").text("Mengetahui,", left, y + 45).text("Kepala Sekolah,", left, y + 50);
+            doc.setFont("times", "bold").text(pjData.ks || "................", left, y + 75).setFont("times", "normal").text("NIP. " + (pjData.nip_ks || "................"), left, y + 80);
+            
+            doc.text("Bendahara BOS,", 150, y + 50).setFont("times", "bold").text(pjData.bnd || "................", 150, y + 75).setFont("times", "normal").text("NIP. " + (pjData.nip_bnd || "................"), 150, y + 80);
+
+            const pH = 355.6; 
+            doc.setDrawColor(200).setLineWidth(0.1).line(15, pH - 15, 200.9, pH - 15);
+            doc.setFontSize(8).setTextColor(150).setFont("times", "italic").text("BKU: " + item.nomor_bku, 15, pH - 10).text("Cloud Sync System", 200.9, pH - 10, { align: "right" });
+            doc.save(`Kuitansi_${item.nomor_bku}.pdf`);
+            showToast("PDF Diunduh");
+        }
+
+        function toggleSidebar() { document.getElementById('sidebar-main').classList.toggle('hidden'); }
+    </script>
+</body>
+</html>
