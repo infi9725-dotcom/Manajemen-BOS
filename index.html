@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MANAJEMEN BOS - SDN 22 Tanah Keras</title>
+    <title>Manajemen BOS - SDN 22 Tanah Keras</title>
     <!-- Chosen Palette: Dynamic (Blue Default) -->
     <!-- Application Structure Plan: Dashboard (Stats), PJ Settings, Form Input, Report Table. All synced via Google Sheets API. -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -53,7 +53,7 @@
             <div class="text-center mb-8">
                 <img src="https://iili.io/fNDuqWx.png" alt="Logo" class="w-24 h-auto mx-auto mb-4 drop-shadow-xl">
                 <h2 class="text-2xl font-bold text-gray-800 tracking-tight">MANAJEMEN BOS</h2>
-                <p class="text-gray-500 text-sm italic">UPT SDN 22 Tanah Keras</p>
+                <p class="text-gray-500 text-sm italic">UPT SDN 22 TANAH KERAS</p>
             </div>
             
             <form id="form-login" onsubmit="handleLogin(event)" class="space-y-5">
@@ -82,8 +82,8 @@
         <aside id="sidebar-main" class="w-64 bg-theme text-white flex-shrink-0 hidden md:flex flex-col shadow-2xl transition-colors duration-500">
             <div class="p-8 border-b border-white border-opacity-10 text-center">
                 <img src="https://iili.io/fNDuqWx.png" alt="Logo" class="w-16 h-auto mx-auto mb-4 bg-white p-1 rounded-lg">
-                <h1 class="text-lg font-bold leading-tight">MANAJEMEN BOS BOS</h1>
-                <p class="text-[10px] text-white text-opacity-70 mt-1 uppercase tracking-widest font-semibold">SDN 22 Tanah Keras</p>
+                <h1 class="text-lg font-bold leading-tight">MANAJEMEN BOS</h1>
+                <p class="text-[10px] text-white text-opacity-70 mt-1 uppercase tracking-widest font-semibold">SDN 22 TANAH KERAS</p>
             </div>
             <nav class="flex-1 mt-6">
                 <a href="#" onclick="showPage('beranda')" class="nav-link flex items-center py-3.5 px-6 hover:bg-white hover:bg-opacity-10 transition duration-200" id="link-beranda">
@@ -99,7 +99,7 @@
             <div class="p-4 border-t border-white border-opacity-10">
                 <div class="flex items-center justify-center space-x-2 text-xs text-white text-opacity-60">
                     <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                    <span>Online & Synced</span>
+                    <span>Online</span>
                 </div>
             </div>
         </aside>
@@ -157,7 +157,7 @@
                                 <h2 class="text-3xl font-bold text-theme transition-colors duration-500">Dashboard BOS</h2>
                                 <p class="mt-2 text-gray-500">Data ini diambil langsung dari Google Sheets. Setiap perubahan akan otomatis tersinkronisasi.</p>
                                 <button onclick="fetchDataFromSheet()" class="mt-4 px-4 py-2 bg-theme-light text-theme rounded-lg text-sm font-semibold hover:bg-gray-100 transition flex items-center">
-                                    <i class="fas fa-sync mr-2"></i> Paksa Sinkronisasi Sekarang
+                                    <i class="fas fa-sync mr-2"></i>Sinkronisasi 
                                 </button>
                             </div>
                         </div>
@@ -173,7 +173,7 @@
                             <h3 class="text-2xl font-bold mt-1 text-green-900" id="stat-total-dana">Rp 0</h3>
                         </div>
                         <div class="bg-amber-50 p-6 rounded-2xl border-l-4 border-amber-600 transition hover:shadow-lg">
-                            <p class="text-sm font-semibold text-amber-600 uppercase">Total Pajak</p>
+                            <p class="text-sm font-semibold text-theme uppercase">Total Pajak</p>
                             <h3 class="text-2xl font-bold mt-1 text-amber-900" id="stat-total-pajak">Rp 0</h3>
                         </div>
                     </div>
@@ -495,7 +495,7 @@
             const success = await postToSheet(data);
             if (success) {
                 pjData = { ks: data.ks, nip_ks: data.nip_ks, bnd: data.bnd, nip_bnd: data.nip_bnd };
-                showToast("Pengaturan PJ tersimpan di Cloud");
+                showToast("tersimpan");
             }
         }
 
@@ -667,17 +667,18 @@
             try { doc.addImage(logoKiri, 'PNG', 18, 12, 22, 22); doc.addImage(logoKanan, 'PNG', 176, 12, 22, 22); } catch (e) {}
 
             doc.setFont("times", "bold").setFontSize(12);
-            doc.text("PEMERINTAH KABUPATEN PESISIR SELATAN", 107.95, 15, { align: "center" });
-            doc.text("DINAS PENDIDIKAN", 107.95, 21, { align: "center" });
-            doc.setFontSize(14).text("UPT SDN 22 TANAH KERAS KECAMATAN BAYANG", 107.95, 28, { align: "center" });
-            doc.setFontSize(9).setFont("times", "italic").text("Alamat: Jln. Tanah Keras Gurun Panjang Barat, Kode Pos: 25652", 107.95, 34, { align: "center" });
-            doc.text("Gmail: UPTsdn22tanahkeras@gmail.com | Website: www.sdn22tk.my.id", 107.95, 38, { align: "center" });
-            doc.setLineWidth(0.8).line(15, 42, 200.9, 42); doc.setLineWidth(0.2).line(15, 43.2, 200.9, 43.2);
+            doc.text("PEMERINTAH KABUPATEN PESISIR SELATAN", 107.95, 21, { align: "center" });
+            doc.text("DINAS PENDIDIKAN DAN KEBUDAYAAN", 107.95, 28, { align: "center" });
+            doc.setFontSize(14).text("UPT SDN 22 TANAH KERAS", 107.95, 28, { align: "center" });
+            doc.text("KECAMATAN BAYANG", 107.95, 15, { align: "center" });
+            doc.setFontSize(9).setFont("times", "italic").text("Alamat: Jln. Tanah Keras Gurun Panjang Barat, Kode Pos: 25652", 107.95, 40, { align: "center" });
+            doc.text("Gmail: UPTsdn22tanahkeras@gmail.com | Website: www.sdn22tk.my.id", 107.95, 44, { align: "center" });
+            doc.setLineWidth(0.8).line(15, 48, 200.9, 48); doc.setLineWidth(0.2).line(15, 49.2, 200.9, 49.2);
 
-            doc.setFontSize(14).setFont("times", "bold").text("KUITANSI", 107.95, 55, { align: "center" });
-            doc.setFontSize(10).text("No. BKU: " + item.nomor_bku, 107.95, 60, { align: "center" });
+            doc.setFontSize(14).setFont("times", "bold").text("KUITANSI", 107.95, 62, { align: "center" });
+            doc.setFontSize(10).text("No. BKU: " + item.nomor_bku, 107.95, 67, { align: "center" });
 
-            let y = 75; const left = 20; const mid = 65;
+            let y = 82; const left = 20; const mid = 65;
             const fields = [
                 ["Kode Rekening", item.kode_rek],
                 ["Sudah Terima Dari", item.terima_dari || "Bendahara BOS"],
@@ -728,5 +729,3 @@
     </script>
 </body>
 </html>
-
-
