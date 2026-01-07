@@ -53,7 +53,7 @@
             <div class="text-center mb-8">
                 <img src="https://iili.io/fNDuqWx.png" alt="Logo" class="w-24 h-auto mx-auto mb-4 drop-shadow-xl">
                 <h2 class="text-2xl font-bold text-gray-800 tracking-tight">MANAJEMEN BOS</h2>
-                <p class="text-gray-500 text-sm italic">UPT SDN 22 TANAH KERAS</p>
+                <p class="text-gray-500 text-sm italic">UPT SDN 22 Tanah Keras</p>
             </div>
             
             <form id="form-login" onsubmit="handleLogin(event)" class="space-y-5">
@@ -83,7 +83,7 @@
             <div class="p-8 border-b border-white border-opacity-10 text-center">
                 <img src="https://iili.io/fNDuqWx.png" alt="Logo" class="w-16 h-auto mx-auto mb-4 bg-white p-1 rounded-lg">
                 <h1 class="text-lg font-bold leading-tight">MANAJEMEN BOS</h1>
-                <p class="text-[10px] text-white text-opacity-70 mt-1 uppercase tracking-widest font-semibold">SDN 22 TANAH KERAS</p>
+                <p class="text-[10px] text-white text-opacity-70 mt-1 uppercase tracking-widest font-semibold">SDN 22 Tanah Keras</p>
             </div>
             <nav class="flex-1 mt-6">
                 <a href="#" onclick="showPage('beranda')" class="nav-link flex items-center py-3.5 px-6 hover:bg-white hover:bg-opacity-10 transition duration-200" id="link-beranda">
@@ -667,10 +667,10 @@
             try { doc.addImage(logoKiri, 'PNG', 18, 12, 22, 22); doc.addImage(logoKanan, 'PNG', 176, 12, 22, 22); } catch (e) {}
 
             doc.setFont("times", "bold").setFontSize(12);
-            doc.text("PEMERINTAH KABUPATEN PESISIR SELATAN", 107.95, 21, { align: "center" });
-            doc.text("DINAS PENDIDIKAN DAN KEBUDAYAAN", 107.95, 28, { align: "center" });
+            doc.text("PEMERINTAH KABUPATEN PESISIR SELATAN", 107.95, 15, { align: "center" });
+            doc.text("DINAS PENDIDIKAN", 107.95, 21, { align: "center" });
             doc.setFontSize(14).text("UPT SDN 22 TANAH KERAS", 107.95, 28, { align: "center" });
-            doc.text("KECAMATAN BAYANG", 107.95, 15, { align: "center" });
+            doc.setFontSize(11).text("KECAMATAN BAYANG", 107.95, 34, { align: "center" });
             doc.setFontSize(9).setFont("times", "italic").text("Alamat: Jln. Tanah Keras Gurun Panjang Barat, Kode Pos: 25652", 107.95, 40, { align: "center" });
             doc.text("Gmail: UPTsdn22tanahkeras@gmail.com | Website: www.sdn22tk.my.id", 107.95, 44, { align: "center" });
             doc.setLineWidth(0.8).line(15, 48, 200.9, 48); doc.setLineWidth(0.2).line(15, 49.2, 200.9, 49.2);
