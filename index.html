@@ -676,7 +676,7 @@
             doc.setLineWidth(0.8).line(15, 48, 200.9, 48); doc.setLineWidth(0.2).line(15, 49.2, 200.9, 49.2);
 
             doc.setFontSize(14).setFont("times", "bold").text("KUITANSI", 107.95, 62, { align: "center" });
-            doc.setFontSize(10).text("NO. BKU: " + item.nomor_bku, 107.95, 67, { align: "center" });
+            doc.setFontSize(10).text("Nomor. BKU: " + item.nomor_bku, 107.95, 67, { align: "center" });
 
             let y = 82; const left = 20; const mid = 65;
             const fields = [
@@ -721,7 +721,7 @@
             });
             const pH = 355.6; 
             doc.setDrawColor(200).setLineWidth(0.1).line(15, pH - 15, 200.9, pH - 15);
-            doc.setFontSize(8).setTextColor(150).setFont("times", "italic").text("No. BKU: " + item.nomor_bku, 15, pH - 10).text("Dicetak pada: " + printDate + " | Sistem Manajemen BOS SDN 22 Tanah Keras", 200.9, pH - 10, { align: "right" });
+            doc.setFontSize(8).setTextColor(150).setFont("times", "italic").text("NO. BKU: " + item.nomor_bku, 15, pH - 10).text("Dicetak pada: " + printDate + " | Sistem Manajemen BOS SDN 22 Tanah Keras", 200.9, pH - 10, { align: "right" });
             doc.save(`Kuitansi_${item.nomor_bku}.pdf`);
         }
 
